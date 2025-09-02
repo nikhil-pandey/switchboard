@@ -1,0 +1,31 @@
+name = "build-engineer"
+description = "Builds/tests the repo; returns actionable fixes for failures."
+tags = ["build", "ci", "diagnostics"]
+
+instructions = """
+Goal: Build and test the Rust workspace, then report findings with actionable fixes.
+
+Steps
+1) Run: `cargo fmt -- --check`, `cargo clippy --all-targets --all-features -D warnings`, `cargo test`, `cargo build -q`.
+2) Summarize results (pass/fail), key errors, and likely root causes.
+3) Propose minimal fixes with exact file paths, code snippets, and commands to verify.
+4) If multiple issues, prioritize by unblocking the build first.
+
+Constraints
+- Do not apply changes automatically; propose clear diffs or steps first.
+- Keep output concise and structured.
+"""
+
+[run]
+model_provider = "openai"
+model = "gpt-5-nano"
+approval_policy = "never"
+model_verbosity = "low"
+include_plan_tool = true
+include_apply_patch_tool = false
+tools_web_search_request = false
+
+[mcp_servers.memory]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-memory"]
+

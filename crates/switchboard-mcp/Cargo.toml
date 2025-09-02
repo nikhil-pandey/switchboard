@@ -1,0 +1,30 @@
+[package]
+name = "switchboard-mcp"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+rust-mcp-sdk = { workspace = true, features = ["server", "hyper-server", "2025_06_18", "client"], default-features = false }
+rust-mcp-schema = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "process", "fs", "time"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+once_cell = { workspace = true }
+env-flags = { workspace = true }
+tracing = { workspace = true }
+tempfile = { workspace = true }
+uuid = { workspace = true }
+toml = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+tracing-subscriber = { version = "0.3.18", features = ["json", "env-filter"] }
+codex-core = { git = "https://github.com/openai/codex", rev = "7eee69d8", version = "0.0.0" }
+codex-login = { git = "https://github.com/openai/codex", rev = "7eee69d8", version = "0.0.0" }
+codex-protocol = { git = "https://github.com/openai/codex", rev = "7eee69d8", version = "0.0.0" }
+serde_yaml = "0.9.34"
+tracing-appender = "0.2.3"
+
+[lints]
+workspace = true

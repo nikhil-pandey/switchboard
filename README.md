@@ -1,0 +1,164 @@
+# Switchboard MCP ⚡️🔌 — Plug Your Agents Into Codex
+
+Switchboard MCP exposes “agents” from Codex TOML, Claude/Anthropic front‑matter, and VS Code Chat Modes through one clean MCP interface that Codex can call directly.
+
+• BYOA (Bring Your Own Agents) • Simple `{ task, cwd }` input • In‑process Codex runner
+
+## 🏁 Quick Start
+
+- Install (one‑liner):
+  - `cargo install --git https://github.com/nikhil-pandey/switchboard --locked`
+- Add to your MCP host (copy one):
+
+```json
+// VS Code (project-level .vscode/mcp.json)
+{
+  "mcpServers": {
+    "switchboard": { "command": "switchboard-mcp", "args": [], "env": { "RUST_LOG": "info" } }
+  }
+}
+```
+
+```json
+// Claude Code (global config)
+{
+  "mcpServers": {
+    "switchboard": { "command": "switchboard-mcp", "args": [], "env": { "RUST_LOG": "info" } }
+  }
+}
+```
+
+```sh
+# Claude Code (CLI)
+claude mcp add switchboard --transport stdio -- switchboard-mcp
+```
+
+```json
+// Cursor (global ~/.cursor/mcp.json or project .cursor/mcp.json)
+{
+  "mcpServers": {
+    "switchboard": { "command": "switchboard-mcp", "args": [], "env": { "RUST_LOG": "info" } }
+  }
+}
+```
+
+```toml
+# Codex (config.toml)
+[mcp_servers.switchboard]
+command = "switchboard-mcp"
+args = []
+```
+
+### HTTP Mode (MCP over HTTP/SSE)
+
+You can also run Switchboard as an HTTP MCP server (SSE-based) and point HTTP-capable MCP hosts at it.
+
+- Start the server over HTTP:
+  - `TRANSPORT=http HOST=127.0.0.1 PORT=8081 switchboard-mcp`
+  - Optional: `PING_SECS=5` (SSE ping), `HTTP_JSON=false` (enable JSON response mode only for debugging/clients that expect JSON).
+
+- Configure your MCP host to use HTTP:
+
+```json
+// VS Code (.vscode/mcp.json)
+{
+  "mcpServers": {
+    "switchboard": { "transport": "http", "url": "http://127.0.0.1:8081" }
+  }
+}
+```
+
+```json
+// Claude Code (global config)
+{
+  "mcpServers": {
+    "switchboard": { "transport": "http", "url": "http://127.0.0.1:8081" }
+  }
+}
+```
+
+```json
+// Cursor (global ~/.cursor/mcp.json or project .cursor/mcp.json)
+{
+  "mcpServers": {
+    "switchboard": { "transport": "http", "url": "http://127.0.0.1:8081" }
+  }
+}
+```
+
+### Auto‑Discovery & Paths (BYOA)
+- Drop your existing agents and we auto‑load them as Codex subagents — no rewrites:
+  - Codex agents: `./.agents/`, `~/.agents/`, and `~/.switchboard/agents/` (also `<workspace>/.switchboard/agents` if `$HOME` is unset)
+  - Anthropic subagents: `./.claude/agents/`, `~/.claude/agents/`, and `~/.switchboard/agents/`
+  - VS Code chat modes: `./.github/chatmodes/`, `~/.chatmodes/`, and `~/.switchboard/chatmodes/`
+- Tools map to Codex built‑ins where sensible; attached MCP servers expose their full toolsets.
+- Verify: start your host, confirm tools are listed, call with `{ task, cwd }`.
+- Optional: add `.agents/model-map.toml` to normalize model/provider tokens across formats.
+
+### Verify With MCP Inspector (optional)
+- UI (stdio): `npx -y @modelcontextprotocol/inspector switchboard-mcp` → open UI, list tools, call with `{ task, cwd }` (cwd must be absolute).
+- CLI (stdio): `npx -y @modelcontextprotocol/inspector --cli switchboard-mcp --method tools/list`
+- Call a tool (example):
+  - `npx -y @modelcontextprotocol/inspector --cli switchboard-mcp --method tools/call --tool-name agent_<safe-name> --tool-arg task='Explain the failing build' --tool-arg cwd="$PWD"`
+- HTTP: start `TRANSPORT=http HOST=127.0.0.1 PORT=8081 switchboard-mcp`, then either use the UI and set transport to SSE with URL `http://127.0.0.1:8081`, or CLI: `npx -y @modelcontextprotocol/inspector --cli http://127.0.0.1:8081 --method tools/list`.
+
+## 🧪 Call Any Agent Tool
+
+- Input schema: `{ "task": "<string>", "cwd": "<string>" }` (both required)
+- Result payload: `{ "ok": true|false, "output": "<string>" }`
+- All logs go to stderr; stdout is reserved for JSON‑RPC.
+
+See CONFIG.md for the full schema, tool mapping, and MCP server behavior.
+
+## 🧭 Tool Mapping (defaults)
+
+- VS Code → Codex: `edit`/`new` → apply_patch, `search`/`fetch`/`githubRepo` → web_search, `runCommands` → terminal (no toggle)
+- Claude/Anthropic → Codex: `Edit`/`MultiEdit`/`Write`/`NotebookEdit` → apply_patch, `WebSearch`/`WebFetch` → web_search, `TodoWrite` → plan
+- Unknown vendor tools remain explicit. MCP servers expose all their tools (no per‑tool gating in Codex).
+
+## 🧱 Model Mapping (optional)
+
+- Default mapping file: `.agents/model-map.toml` (case‑insensitive tokens).
+- Built‑in defaults cover Anthropic “sonnet/opus/haiku” and common VS Code tokens (e.g., “Claude Sonnet 3.5”, “GPT‑4o”, “Auto”).
+- Controls normalization of `run.model` and `run.model_provider`. Flags: `AGENTS_MODEL_MAP_*`. See CONFIG.md for format.
+
+## 
+
+## ⚙️ Configuration (at a glance)
+
+- Transport/logging: `TRANSPORT=stdio|http`, `HOST`, `PORT`, `RUST_LOG`, `TRACING_JSON|COMPACT|PRETTY`
+- Discovery/dirs: `WORKSPACE_DIR`, `AGENTS_ENABLE_*`, `*_DIRS`, `AGENTS_FILTER`, `AGENTS_PREFIX_*`
+- MCP servers: `AGENTS_MCP_DISCOVERY`, `VSCODE_USER_MCP`, `AGENTS_MCP_ENUMERATE`, `AGENTS_MCP_LIMIT_REFERENCED`, `AGENTS_MCP_ENUM_*`
+- Tool mapping: `AGENTS_TOOLMAP_ENABLE`, `AGENTS_TOOLMAP_ALLOW_CUSTOM_SERVERS`
+- Model mapping: `AGENTS_MODEL_MAP_*` (see CONFIG.md)
+
+Defaults are chosen to “just work” locally. See CONFIG.md for the full reference.
+
+## 🛠️ Development
+- Edition: Rust 2024
+- Build/test/lint: `cargo test`, `cargo fmt -- --check`, `cargo clippy --all-targets --all-features -- -D warnings`
+
+### Tip: MCP Inception
+- Yes, you can run Switchboard inside Switchboard. It’s like a turducken of agents — a dream within a dream, but with filters.
+- Create a Codex agent that embeds Switchboard and scopes it with `AGENTS_FILTER`:
+
+```toml
+# ./.agents/switchboard-scoped.toml
+name = "Switchboard (Scoped)"
+description = "A Switchboard agent that only knows about 'docs' and 'lint' agents"
+tools = ["plan", "apply_patch"]
+
+[mcp_servers.switchboard]
+command = "switchboard-mcp"
+args = []
+env = { AGENTS_FILTER = "docs|lint" }
+```
+
+- Want to go deeper? Add another agent that points to Switchboard again with an even narrower `AGENTS_FILTER` (e.g., just `docs`). Congrats, you now have a switchboard agent that calls a switchboard agent that only calls… you get it.
+- Verify with the Inspector: list tools, find your `agent_switchboard_scoped` tool, and call it with `{ task, cwd }`. If the room starts spinning, step away from the recursion.
+
+## 🤝 Contributing
+- Issues and PRs welcome. Keep changes focused; include tests where meaningful.
+
+## 📄 License
+- MIT

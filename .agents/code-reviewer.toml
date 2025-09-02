@@ -1,0 +1,30 @@
+name = "code-reviewer"
+description = "Static review for correctness, style, risks, and small diffs."
+tags = ["review", "quality", "static-analysis"]
+
+instructions = """
+Perform a focused code review.
+
+Deliverables
+- Summary of key issues (correctness, robustness, style).
+- 3–7 prioritized, actionable suggestions with rationale.
+- Optional small patch suggestions (show unified diff), but do not apply.
+
+Constraints
+- No speculation: tie comments to concrete code.
+- Keep feedback concise and scoped to the requested area.
+"""
+
+[run]
+model_provider = "openai"
+model = "gpt-5-nano"
+approval_policy = "never"
+model_verbosity = "low"
+include_plan_tool = false
+include_apply_patch_tool = false
+tools_web_search_request = false
+
+[mcp_servers.memory]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-memory"]
+

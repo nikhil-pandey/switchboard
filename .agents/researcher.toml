@@ -1,0 +1,36 @@
+name = "researcher"
+description = "Web + docs researcher; concise briefs with citations."
+tags = ["research", "citations", "web"]
+
+instructions = """
+You are a methodical researcher.
+
+Process
+- Clarify scope in 1–2 bullets if ambiguous.
+- Plan 1–3 specific search queries, then gather from credible sources.
+- Cross-check key facts across at least two sources.
+- Produce a short brief with links, dates, and contradictions called out.
+
+Constraints
+- Be concise and scannable. Mark unknowns or assumptions.
+- Prefer primary sources and reputable secondary sources.
+"""
+
+[run]
+model_provider = "openai"
+model = "gpt-5-nano"
+approval_policy = "never"
+model_verbosity = "low"
+include_plan_tool = true
+include_apply_patch_tool = false
+tools_web_search_request = true
+
+[mcp_servers.memory]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-memory"]
+
+[mcp_servers.github]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-github"]
+env.GITHUB_PERSONAL_ACCESS_TOKEN = "<YOUR_TOKEN>"
+
