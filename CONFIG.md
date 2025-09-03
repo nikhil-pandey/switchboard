@@ -1,9 +1,9 @@
 # Switchboard MCP — Agent Config Reference
 
-This is the authoritative reference for Switchboard MCP configuration. It specifies the exact agent schemas Switchboard MCP accepts, the environment flags it honors, and how each agent type maps into Codex at runtime. The root README provides a high‑level overview and examples.
+This is the authoritative reference for Switchboard MCP configuration. It specifies the exact agent schemas Switchboard MCP accepts, the environment flags it honors, and how each agent type maps into a Codex‑like runtime (executed by a Codex engine) behind the scenes. The root README provides a high‑level overview and examples.
 
 - All discovered agents are exposed as MCP tools with a uniform input schema.
-- We do not set model/provider/etc. defaults; Codex supplies its own defaults.
+- We do not set model/provider/etc. defaults; the Codex runner supplies its own defaults.
 
 ## MCP Tool Input Schema
 
@@ -31,7 +31,7 @@ Errors and debug logs are written to stderr and not included in the payload.
 
 Switchboard creates/selects a per‑agent Codex profile but only sets fields explicitly provided by the agent config. If a field is absent, it remains unset and Codex’s own defaults apply.
 
-## 1) Codex‑Variant Agents (*.toml)
+## 1) Switchboard TOML (Codex‑like) Agents (*.toml)
 
 Discovery paths (in order):
 - `<workspace>/.agents/*.toml`
@@ -48,13 +48,13 @@ Top‑level schema:
 - run: table (optional; forwarded 1:1 to Codex profile fields)
 - mcp_servers: table (optional; embeds stdio MCP servers)
 
-Tools → Codex toggles (recognized values):
+Tools → Codex‑like toggles (recognized values):
 - plan → include_plan_tool = true
 - apply_patch or apply-patch → include_apply_patch_tool = true
 - view_image or view-image → include_view_image_tool = true
 - web_search or web-search → tools_web_search_request = true
 
-[run] table (all fields optional; forwarded to profile if present):
+[run] table (all fields optional; forwarded to the Codex runner profile if present):
 - model: string
 - model_provider: string
 - approval_policy: enum (Codex AskForApproval)
@@ -69,7 +69,7 @@ Tools → Codex toggles (recognized values):
 - include_view_image_tool: bool
 - tools_web_search_request: bool
 
-Runtime mapping for Codex TOML:
+Runtime mapping for Switchboard TOML:
 - Select profile: safe version of `name`.
 - base_instructions: from `instructions_file` (if readable) or `instructions` (if non‑empty).
 - cwd: from MCP input `cwd`.
@@ -128,7 +128,7 @@ Tools parsing:
 - If a list, use items as given.
 - Parsed tools become bare MCP tool refs; provider mapping then translates known tools to Codex toggles (or namespaced MCP tools) when mapping is enabled.
 
-Anthropic tool mapping → Codex toggles:
+Anthropic tool mapping → Codex‑like toggles:
 - Edit, MultiEdit, Write, NotebookEdit → include_apply_patch_tool = true
 - WebSearch, WebFetch → tools_web_search_request = true
 - TodoWrite → include_plan_tool = true
@@ -166,7 +166,7 @@ Tools parsing:
 - Namespaced entries (e.g., `memory::memory`) pin to that MCP server/tool.
 - Parsed tools become MCP tool refs; mapping may convert bare ones to Codex toggles and optionally inject default servers.
 
-VS Code tool mapping → Codex toggles:
+VS Code tool mapping → Codex‑like toggles:
 - edit, new → include_apply_patch_tool = true
 - search, fetch, githubRepo → tools_web_search_request = true
 - runCommands → consumed as terminal access (no toggle)
@@ -200,9 +200,9 @@ Enumeration and gating (optional):
 - When enabled, Switchboard enumerates candidate servers and injects only those that actually expose the referenced tools. Policy on ambiguous matches is controlled by a flag (see below).
 
 Tool exposure
-- Once a server is attached, Codex currently does not support per‑tool enable/disable. All tools exposed by that MCP server are available to the agent. Use server‑level selection (referenced‑only or enumerated) to constrain what is attached.
+- Once a server is attached, the Codex runner currently does not support per‑tool enable/disable. All tools exposed by that MCP server are available to the agent. Use server‑level selection (referenced‑only or enumerated) to constrain what is attached.
 
-## Mapping Into Codex at Runtime
+## Runtime Mapping (Codex‑powered)
 
 What Switchboard sets:
 - config_profile: safe(name)
@@ -211,7 +211,7 @@ What Switchboard sets:
 - sandbox_mode and include_* / web_search toggles: forwarded only if present
 - MCP servers: attached from discovery + embedded `[mcp_servers]`
 
-What Switchboard never defaults (Codex applies its own defaults):
+What Switchboard never defaults (the Codex runner applies its own defaults):
 - model, model_provider, approval_policy, disable_response_storage
 - model_reasoning_effort, model_reasoning_summary, model_verbosity
 - chatgpt_base_url

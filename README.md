@@ -1,14 +1,25 @@
-# Switchboard MCP ⚡️🔌 — Plug Your Agents Into Codex
+# Switchboard MCP ⚡️🔌 — Codex‑Powered Subagents For Any MCP Client
 
-Switchboard MCP exposes “agents” from Codex TOML, Claude/Anthropic front‑matter, and VS Code Chat Modes through one clean MCP interface that Codex can call directly.
+Switchboard MCP is an adapter MCP server. It discovers agents defined across ecosystems — Switchboard TOML (a Codex‑like schema), Claude/Anthropic front‑matter, and VS Code Chat Modes — normalizes them into a Codex‑like agent shape, executes them with a Codex engine, and exposes them as plain MCP tools. You speak MCP; we do the Codex work behind the scenes.
 
-• BYOA (Bring Your Own Agents) • Simple `{ task, cwd }` input • In‑process Codex runner
+• BYOA (Bring Your Own Agents) • Simple `{ task, cwd }` input • stdio or HTTP/SSE transport
+
+Works with any MCP client: VS Code, Claude Code, Cursor, Codex CLI, MCP Inspector, and more.
+
+Note on terminology
+- “Codex‑like” means our agent/tool conventions are inspired by Codex (e.g., `apply_patch`, `plan`, `web_search`), but are not a compatibility promise or a drop‑in for Codex configs.
+- We discover Switchboard TOML (our Codex‑like format), not Codex TOML. Internally we run agents with a Codex engine.
+
+How to think about it
+- Adapter: Discover → Normalize (Codex‑like) → Execute (Codex) → Expose (MCP)
+- Subagents: Each discovered agent becomes an MCP tool you can call from any client.
+- Clients: Works in any MCP host; Codex is one of many.
 
 ## 🏁 Quick Start
 
 - Install (one‑liner):
   - `cargo install --git https://github.com/nikhil-pandey/switchboard --locked`
-- Add to your MCP host (copy one):
+- Add to your MCP client (copy one):
 
 ```json
 // VS Code (project-level .vscode/mcp.json)
@@ -43,7 +54,7 @@ claude mcp add switchboard --transport stdio -- switchboard-mcp
 ```
 
 ```toml
-# Codex (config.toml)
+# Codex CLI (config.toml)
 [mcp_servers.switchboard]
 command = "switchboard-mcp"
 args = []
@@ -87,12 +98,12 @@ You can also run Switchboard as an HTTP MCP server (SSE-based) and point HTTP-ca
 ```
 
 ### Auto‑Discovery & Paths (BYOA)
-- Drop your existing agents and we auto‑load them as Codex subagents — no rewrites:
-  - Codex agents: `./.agents/`, `~/.agents/`, and `~/.switchboard/agents/` (also `<workspace>/.switchboard/agents` if `$HOME` is unset)
-  - Anthropic subagents: `./.claude/agents/`, `~/.claude/agents/`, and `~/.switchboard/agents/`
+- Drop your existing agents and we auto‑load them as Switchboard agent tools — no rewrites:
+  - Switchboard TOML (Codex‑like): `./.agents/`, `~/.agents/`, and `~/.switchboard/agents/` (also `<workspace>/.switchboard/agents` if `$HOME` is unset)
+  - Anthropic agents: `./.claude/agents/`, `~/.claude/agents/`, and `~/.switchboard/agents/`
   - VS Code chat modes: `./.github/chatmodes/`, `~/.chatmodes/`, and `~/.switchboard/chatmodes/`
-- Tools map to Codex built‑ins where sensible; attached MCP servers expose their full toolsets.
-- Verify: start your host, confirm tools are listed, call with `{ task, cwd }`.
+- Tools map to Switchboard’s Codex‑like built‑ins where sensible; attached MCP servers expose their full toolsets.
+- Verify: start your client, confirm tools are listed, call with `{ task, cwd }`.
 - Optional: add `.agents/model-map.toml` to normalize model/provider tokens across formats.
 
 ### Verify With MCP Inspector (optional)
@@ -110,19 +121,17 @@ You can also run Switchboard as an HTTP MCP server (SSE-based) and point HTTP-ca
 
 See CONFIG.md for the full schema, tool mapping, and MCP server behavior.
 
-## 🧭 Tool Mapping (defaults)
+## 🧭 Provider Tool Mapping (defaults)
 
-- VS Code → Codex: `edit`/`new` → apply_patch, `search`/`fetch`/`githubRepo` → web_search, `runCommands` → terminal (no toggle)
-- Claude/Anthropic → Codex: `Edit`/`MultiEdit`/`Write`/`NotebookEdit` → apply_patch, `WebSearch`/`WebFetch` → web_search, `TodoWrite` → plan
-- Unknown vendor tools remain explicit. MCP servers expose all their tools (no per‑tool gating in Codex).
+- VS Code → Codex‑like: `edit`/`new` → apply_patch, `search`/`fetch`/`githubRepo` → web_search, `runCommands` → terminal (no toggle)
+- Claude/Anthropic → Codex‑like: `Edit`/`MultiEdit`/`Write`/`NotebookEdit` → apply_patch, `WebSearch`/`WebFetch` → web_search, `TodoWrite` → plan
+- Unknown vendor tools remain explicit. Attached MCP servers expose their full toolsets.
 
 ## 🧱 Model Mapping (optional)
 
 - Default mapping file: `.agents/model-map.toml` (case‑insensitive tokens).
 - Built‑in defaults cover Anthropic “sonnet/opus/haiku” and common VS Code tokens (e.g., “Claude Sonnet 3.5”, “GPT‑4o”, “Auto”).
 - Controls normalization of `run.model` and `run.model_provider`. Flags: `AGENTS_MODEL_MAP_*`. See CONFIG.md for format.
-
-## 
 
 ## ⚙️ Configuration (at a glance)
 
@@ -140,7 +149,7 @@ Defaults are chosen to “just work” locally. See CONFIG.md for the full refer
 
 ### Tip: MCP Inception
 - Yes, you can run Switchboard inside Switchboard. It’s like a turducken of agents — a dream within a dream, but with filters.
-- Create a Codex agent that embeds Switchboard and scopes it with `AGENTS_FILTER`:
+- Create a Switchboard TOML (Codex‑like) agent that embeds Switchboard and scopes it with `AGENTS_FILTER`:
 
 ```toml
 # ./.agents/switchboard-scoped.toml
@@ -151,7 +160,7 @@ tools = ["plan", "apply_patch"]
 [mcp_servers.switchboard]
 command = "switchboard-mcp"
 args = []
-env = { AGENTS_FILTER = "docs|lint" }
+env = { AGENTS_FILTER = "docs lint" }
 ```
 
 - Want to go deeper? Add another agent that points to Switchboard again with an even narrower `AGENTS_FILTER` (e.g., just `docs`). Congrats, you now have a switchboard agent that calls a switchboard agent that only calls… you get it.
