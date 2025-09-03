@@ -97,6 +97,25 @@ You can also run Switchboard as an HTTP MCP server (SSE-based) and point HTTP-ca
 }
 ```
 
+### Note: Embedded MCP Servers Must Be stdio
+
+Switchboard itself can run over stdio or HTTP/SSE as a server. However, embedded/attached MCP servers inside agents (the `[mcp_servers.*]` blocks) must be stdio-only right now because the underlying Codex runner does not attach non-stdio servers directly.
+
+If you need to use an HTTP/SSE-only MCP server with an agent, use a stdio bridge like [mcp-proxy](https://github.com/sparfenyuk/mcp-proxy) to proxy it:
+
+```toml
+[mcp_servers.deepwiki]
+command = "mcp-proxy"
+# For Streamable HTTP endpoints
+args = ["--transport", "streamablehttp", "https://mcp.deepwiki.com/mcp"]
+# For SSE endpoints (default transport)
+# args = ["https://mcp.deepwiki.com/sse"]
+
+# Optional auth via env or headers
+# env = { API_ACCESS_TOKEN = "<token>" }
+# Or pass headers with repeated -H/--headers flags if your client supports args arrays
+```
+
 ### Auto‑Discovery & Paths (BYOA)
 - Drop your existing agents and we auto‑load them as Switchboard agent tools — no rewrites:
   - Switchboard TOML (Codex‑like): `./.agents/`, `~/.agents/`, and `~/.switchboard/agents/` (also `<workspace>/.switchboard/agents` if `$HOME` is unset)

@@ -202,6 +202,25 @@ Enumeration and gating (optional):
 Tool exposure
 - Once a server is attached, the Codex runner currently does not support per‑tool enable/disable. All tools exposed by that MCP server are available to the agent. Use server‑level selection (referenced‑only or enumerated) to constrain what is attached.
 
+Non‑stdio servers (HTTP/SSE) via proxy
+- Embedded servers must be stdio because the Codex runner does not attach non‑stdio servers directly.
+- To use an HTTP/SSE‑only MCP server from an agent, bridge it to stdio with a proxy such as [mcp-proxy](https://github.com/sparfenyuk/mcp-proxy).
+
+Example (proxying a Streamable HTTP server):
+
+```toml
+[mcp_servers.deepwiki]
+command = "mcp-proxy"
+args = ["--transport", "streamablehttp", "https://mcp.deepwiki.com/mcp"]
+
+# For SSE endpoints (default transport):
+# args = ["https://mcp.deepwiki.com/sse"]
+
+# Optional auth:
+# env = { API_ACCESS_TOKEN = "<token>" }
+```
+
+
 ## Runtime Mapping (Codex‑powered)
 
 What Switchboard sets:
