@@ -160,6 +160,10 @@ fn merge_claude_user(
 }
 
 /// Merge VSCode `mcp.json` entries (project or user-provided path).
+///
+/// VS Code project format typically uses a top-level `servers` table, while
+/// some examples reuse the Claude/Cursor-style `mcpServers`. Be tolerant and
+/// accept either key, preferring `servers` when both are present.
 fn merge_vscode_mcp(path: &Path, out: &mut HashMap<String, NormalizedMcpServer>) {
     let Ok(content) = fs::read_to_string(path) else {
         return;
@@ -167,9 +171,12 @@ fn merge_vscode_mcp(path: &Path, out: &mut HashMap<String, NormalizedMcpServer>)
     let Ok(v) = serde_json::from_str::<JsonValue>(&content) else {
         return;
     };
-    let Some(map) = v.get("servers").and_then(|m| m.as_object()) else {
-        return;
-    };
+    // Prefer VS Code's `servers` key; fall back to `mcpServers` if present.
+    let map = v
+        .get("servers")
+        .and_then(|m| m.as_object())
+        .or_else(|| v.get("mcpServers").and_then(|m| m.as_object()));
+    let Some(map) = map else { return; };
     for (key, def) in map.iter() {
         if let Some(mut srv) = parse_stdio_like(key, def) {
             srv.origin = McpServerOrigin {
@@ -253,4 +260,73 @@ fn parse_claude_server(key: &str, def: &JsonValue) -> Option<NormalizedMcpServer
         return None;
     }
     parse_stdio_like(key, def)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    fn mk_tmp_dir(prefix: &str) -> PathBuf {
+        let mut p = std::env::temp_dir();
+        let unique = format!("{}_{}", prefix, std::process::id());
+        p.push(unique);
+        // Best-effort cleanup if exists
+        let _ = std::fs::remove_dir_all(&p);
+        std::fs::create_dir_all(&p).expect("create tmp dir");
+        p
+    }
+
+    fn write_file(path: &Path, content: &str) {
+        if let Some(dir) = path.parent() { std::fs::create_dir_all(dir).unwrap(); }
+        let mut f = std::fs::File::create(path).unwrap();
+        f.write_all(content.as_bytes()).unwrap();
+        f.sync_all().ok();
+    }
+
+    #[test]
+    fn vscode_servers_key_is_parsed() {
+        let ws = mk_tmp_dir("sb_vscode_servers");
+        let mcp_path = ws.join(".vscode/mcp.json");
+        let json = r#"{
+            "servers": {
+                "switchboard": { "command": "switchboard-mcp", "args": [], "env": {"RUST_LOG":"info"} }
+            },
+            "inputs": []
+        }"#;
+        write_file(&mcp_path, json);
+
+        let discovered = discover_stdio_servers(&ws, None);
+        let srv = discovered.by_key.get("switchboard").expect("server present");
+        match &srv.transport {
+            McpTransport::Stdio { command, args, env } => {
+                assert_eq!(command, "switchboard-mcp");
+                assert!(args.is_empty());
+                assert_eq!(env.get("RUST_LOG").map(|s| s.as_str()), Some("info"));
+            }
+        }
+        assert!(matches!(srv.origin.provider, McpProvider::Vscode));
+    }
+
+    #[test]
+    fn vscode_mcpservers_key_is_also_parsed() {
+        let ws = mk_tmp_dir("sb_vscode_mcpservers");
+        let mcp_path = ws.join(".vscode/mcp.json");
+        let json = r#"{
+            "mcpServers": {
+                "switchboard": { "command": "switchboard-mcp", "args": ["--flag"], "env": {} }
+            }
+        }"#;
+        write_file(&mcp_path, json);
+
+        let discovered = discover_stdio_servers(&ws, None);
+        let srv = discovered.by_key.get("switchboard").expect("server present");
+        match &srv.transport {
+            McpTransport::Stdio { command, args, env: _ } => {
+                assert_eq!(command, "switchboard-mcp");
+                assert_eq!(args, &vec!["--flag".to_string()]);
+            }
+        }
+        assert!(matches!(srv.origin.provider, McpProvider::Vscode));
+    }
 }

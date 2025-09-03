@@ -13,7 +13,7 @@ Switchboard MCP exposes “agents” from Codex TOML, Claude/Anthropic front‑m
 ```json
 // VS Code (project-level .vscode/mcp.json)
 {
-  "mcpServers": {
+  "servers": {
     "switchboard": { "command": "switchboard-mcp", "args": [], "env": { "RUST_LOG": "info" } }
   }
 }
@@ -62,7 +62,7 @@ You can also run Switchboard as an HTTP MCP server (SSE-based) and point HTTP-ca
 ```json
 // VS Code (.vscode/mcp.json)
 {
-  "mcpServers": {
+  "servers": {
     "switchboard": { "transport": "http", "url": "http://127.0.0.1:8081" }
   }
 }
