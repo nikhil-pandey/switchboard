@@ -176,7 +176,9 @@ fn merge_vscode_mcp(path: &Path, out: &mut HashMap<String, NormalizedMcpServer>)
         .get("servers")
         .and_then(|m| m.as_object())
         .or_else(|| v.get("mcpServers").and_then(|m| m.as_object()));
-    let Some(map) = map else { return; };
+    let Some(map) = map else {
+        return;
+    };
     for (key, def) in map.iter() {
         if let Some(mut srv) = parse_stdio_like(key, def) {
             srv.origin = McpServerOrigin {
@@ -184,7 +186,9 @@ fn merge_vscode_mcp(path: &Path, out: &mut HashMap<String, NormalizedMcpServer>)
                 path: Some(path.to_path_buf()),
                 note: Some(".vscode/mcp.json".to_string()),
             };
-            out.entry(srv.key.clone()).or_insert(srv);
+            // Project/user-specified VS Code servers should take precedence over any
+            // previously merged global defaults (e.g., Claude user config).
+            out.insert(srv.key.clone(), srv);
         }
     }
 }
@@ -278,7 +282,9 @@ mod tests {
     }
 
     fn write_file(path: &Path, content: &str) {
-        if let Some(dir) = path.parent() { std::fs::create_dir_all(dir).unwrap(); }
+        if let Some(dir) = path.parent() {
+            std::fs::create_dir_all(dir).unwrap();
+        }
         let mut f = std::fs::File::create(path).unwrap();
         f.write_all(content.as_bytes()).unwrap();
         f.sync_all().ok();
@@ -297,7 +303,10 @@ mod tests {
         write_file(&mcp_path, json);
 
         let discovered = discover_stdio_servers(&ws, None);
-        let srv = discovered.by_key.get("switchboard").expect("server present");
+        let srv = discovered
+            .by_key
+            .get("switchboard")
+            .expect("server present");
         match &srv.transport {
             McpTransport::Stdio { command, args, env } => {
                 assert_eq!(command, "switchboard-mcp");
@@ -320,9 +329,16 @@ mod tests {
         write_file(&mcp_path, json);
 
         let discovered = discover_stdio_servers(&ws, None);
-        let srv = discovered.by_key.get("switchboard").expect("server present");
+        let srv = discovered
+            .by_key
+            .get("switchboard")
+            .expect("server present");
         match &srv.transport {
-            McpTransport::Stdio { command, args, env: _ } => {
+            McpTransport::Stdio {
+                command,
+                args,
+                env: _,
+            } => {
                 assert_eq!(command, "switchboard-mcp");
                 assert_eq!(args, &vec!["--flag".to_string()]);
             }

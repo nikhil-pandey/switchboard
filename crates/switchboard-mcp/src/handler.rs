@@ -79,10 +79,7 @@ impl AgentsServerHandler {
                 cwd_schema.insert("type".to_string(), JsonValue::String("string".to_string()));
                 cwd_schema.insert(
                     "description".to_string(),
-                    JsonValue::String(
-                        "Working directory (must be an absolute path)."
-                            .to_string(),
-                    ),
+                    JsonValue::String("Working directory (must be an absolute path).".to_string()),
                 );
                 props.insert("cwd".to_string(), cwd_schema);
                 Tool {
@@ -221,9 +218,9 @@ impl ServerHandlerCore for AgentsServerHandler {
                             "invalid cwd (must be absolute)"
                         );
                         return Err(
-                            rust_mcp_sdk::schema::RpcError::invalid_params().with_message(
-                                format!("invalid 'cwd': got '{cwd}', expected an absolute path"),
-                            ),
+                            rust_mcp_sdk::schema::RpcError::invalid_params().with_message(format!(
+                                "invalid 'cwd': got '{cwd}', expected an absolute path"
+                            )),
                         );
                     }
                     tracing::debug!(

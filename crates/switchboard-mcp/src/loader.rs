@@ -10,7 +10,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::Context as _;
 
@@ -182,6 +182,44 @@ pub async fn prepare_all(settings: &LoaderSettings) -> anyhow::Result<Vec<Prepar
     } else {
         DiscoveredServers::default()
     };
+    // Avoid recursive self-attachment: skip any discovered server that looks like
+    // this Switchboard MCP itself (e.g., command name "switchboard-mcp" or key "switchboard").
+    // Can be disabled by setting SWITCHBOARD_SKIP_SELF=false.
+    let skip_self = std::env::var("SWITCHBOARD_SKIP_SELF")
+        .map(|v| !(v.eq_ignore_ascii_case("false") || v == "0"))
+        .unwrap_or(true);
+    if skip_self && !discovered.by_key.is_empty() {
+        let before = discovered.by_key.len();
+        discovered.by_key.retain(|k, srv| match &srv.transport {
+            crate::mcp::types::McpTransport::Stdio { command, .. } => {
+                let file = Path::new(command)
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("")
+                    .to_ascii_lowercase();
+                let looks_like_self =
+                    k.eq_ignore_ascii_case("switchboard") || file.starts_with("switchboard-mcp");
+                if looks_like_self {
+                    tracing::info!(
+                        "skipping self 'switchboard' MCP server '{}' (command={})",
+                        k,
+                        command
+                    );
+                    false
+                } else {
+                    true
+                }
+            }
+        });
+        let after = discovered.by_key.len();
+        if after < before {
+            tracing::info!(
+                "filtered out self switchboard servers: {} → {}",
+                before,
+                after
+            );
+        }
+    }
     if !discovered.by_key.is_empty() {
         for (k, srv) in &discovered.by_key {
             let note = srv.origin.note.as_deref().unwrap_or("");
@@ -235,12 +273,12 @@ pub async fn prepare_all(settings: &LoaderSettings) -> anyhow::Result<Vec<Prepar
         let path = settings.model_map_file.as_ref().unwrap_or(&default_path);
         match crate::modelmap::load_from_file(path) {
             Ok(m) => {
-            tracing::info!(
-                "loaded model map from {} (tokens={}, provider_aliases={})",
-                path.display(),
-                m.by_token.len(),
-                m.provider_aliases.len()
-            );
+                tracing::info!(
+                    "loaded model map from {} (tokens={}, provider_aliases={})",
+                    path.display(),
+                    m.by_token.len(),
+                    m.provider_aliases.len()
+                );
                 Some(m)
             }
             Err(e) => {
@@ -309,25 +347,25 @@ pub async fn prepare_all(settings: &LoaderSettings) -> anyhow::Result<Vec<Prepar
             }
             while let Some(res) = set.join_next().await {
                 match res {
-            Ok((_key, Ok(st))) => {
-                inventory.insert(st.key, st.tools);
-            }
-            Ok((k, Err(e))) => {
-                if settings.enum_strict {
-                    // In strict mode, drop from discovered by not adding inventory entry.
-                } else {
-                    tracing::warn!("enumeration failed for server {}: {}", k, e);
+                    Ok((_key, Ok(st))) => {
+                        inventory.insert(st.key, st.tools);
+                    }
+                    Ok((k, Err(e))) => {
+                        if settings.enum_strict {
+                            // In strict mode, drop from discovered by not adding inventory entry.
+                        } else {
+                            tracing::warn!("enumeration failed for server {}: {}", k, e);
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("enumeration task join error: {}", e);
+                    }
                 }
-            }
-            Err(e) => {
-                tracing::warn!("enumeration task join error: {}", e);
-            }
-        }
             }
             // Log enumerated tools per server (summarized)
             for (srv, tools) in &inventory {
-            let summary = summarize_tools(tools, 10);
-            tracing::info!("enumerated server '{}' tools: {}", srv, summary);
+                let summary = summarize_tools(tools, 10);
+                tracing::info!("enumerated server '{}' tools: {}", srv, summary);
             }
             // Remove servers that failed to enumerate from consideration
             let before = discovered.by_key.len();
@@ -671,11 +709,11 @@ fn convert_servers_for_agent(
                     out.insert(k, v);
                 }
             }
-                Err(e) => tracing::warn!(
-                    "failed to parse embedded mcp_servers for {}: {}",
-                    ra.config.name,
-                    e
-                ),
+            Err(e) => tracing::warn!(
+                "failed to parse embedded mcp_servers for {}: {}",
+                ra.config.name,
+                e
+            ),
         }
     }
     out
@@ -760,11 +798,11 @@ fn gate_by_inventory(
                             selected.insert(k.clone(), srv.clone());
                         }
                     } else {
-            tracing::warn!(
-                "ambiguous bare tool '{}' matches multiple servers: {:?}",
-                tool,
-                matches
-            );
+                        tracing::warn!(
+                            "ambiguous bare tool '{}' matches multiple servers: {:?}",
+                            tool,
+                            matches
+                        );
                         if fallback_all_on_ambiguous {
                             for k in matches {
                                 if let Some(srv) = discovered.by_key.get(k) {

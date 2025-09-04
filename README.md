@@ -53,11 +53,17 @@ claude mcp add switchboard --transport stdio -- switchboard-mcp
 }
 ```
 
-```toml
-# Codex CLI (config.toml)
-[mcp_servers.switchboard]
-command = "switchboard-mcp"
-args = []
+```sh
+# Codex CLI (recommended): inline per-run config (avoid global config.toml)
+# global config can accidentally create infinite recursion if
+# switchboard discovers itself; prefer ephemeral -c flags instead for now
+# until we have a better solution.
+#
+# Also, Codes does not automatically forward env variables to MCP child processes;
+# set them explicitly in the server env for the spawned process.
+codex \
+  -c mcp_servers.switchboard.command=switchboard-mcp \
+  -c "mcp_servers.switchboard.env={OPENAI_API_KEY=\"${OPENAI_API_KEY}\",TRACING_FILTER=\"info\"}"
 ```
 
 ### HTTP Mode (MCP over HTTP/SSE)

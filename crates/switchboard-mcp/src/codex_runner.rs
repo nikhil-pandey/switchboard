@@ -6,7 +6,7 @@
 //! separate process. Output is captured and returned in a structured form.
 
 use crate::model::{PreparedAgent, safe_name};
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use async_trait::async_trait;
 
 /// Structured result of running a Codex task.

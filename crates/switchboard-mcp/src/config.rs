@@ -23,9 +23,9 @@ pub struct AgentsCfg {
     pub enable_anthropic: Option<bool>,
     pub enable_vscode: Option<bool>,
 
-    pub codex_dirs: Option<Vec<String>>,      // absolute paths preferred
-    pub anthropic_dirs: Option<Vec<String>>,  // absolute paths preferred
-    pub vscode_dirs: Option<Vec<String>>,     // absolute paths preferred
+    pub codex_dirs: Option<Vec<String>>, // absolute paths preferred
+    pub anthropic_dirs: Option<Vec<String>>, // absolute paths preferred
+    pub vscode_dirs: Option<Vec<String>>, // absolute paths preferred
 
     pub prefix_codex: Option<String>,
     pub prefix_anthropic: Option<String>,
@@ -63,11 +63,10 @@ pub fn load_user_config(sb_home: &Path) -> anyhow::Result<Option<UserConfig>> {
 }
 
 pub fn expand_home(path: &str) -> PathBuf {
-    if let Some(stripped) = path.strip_prefix("~/") {
-        if let Ok(home) = std::env::var("HOME") {
-            return PathBuf::from(home).join(stripped);
-        }
+    if let Some(stripped) = path.strip_prefix("~/")
+        && let Ok(home) = std::env::var("HOME")
+    {
+        return PathBuf::from(home).join(stripped);
     }
     PathBuf::from(path)
 }
-

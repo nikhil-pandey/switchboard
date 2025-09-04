@@ -45,11 +45,7 @@ fn init_tracing() {
         SWITCHBOARD_HOME: &str = "";
     }
 
-    use tracing_subscriber::{
-        EnvFilter,
-        layer::SubscriberExt,
-        prelude::*,
-    };
+    use tracing_subscriber::{EnvFilter, layer::SubscriberExt, prelude::*};
 
     // Determine Switchboard home
     let sb_home = if !(*SWITCHBOARD_HOME).is_empty() {
@@ -58,7 +54,9 @@ fn init_tracing() {
         std::path::PathBuf::from(home).join(".switchboard")
     } else {
         // Fallback: current dir /.switchboard
-        std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")).join(".switchboard")
+        std::env::current_dir()
+            .unwrap_or_else(|_| std::path::PathBuf::from("."))
+            .join(".switchboard")
     };
 
     // Load user config (optional) and allow it to influence tracing defaults when env is not set
@@ -82,27 +80,35 @@ fn init_tracing() {
     };
 
     if let Some(cfg) = user_cfg.as_ref().and_then(|c| c.logging.as_ref()) {
-        if !(env_set("TRACING_FILTER") || env_set("RUST_LOG")) {
-            if let Some(level) = cfg.level.as_ref() {
-                rust_log = level.clone();
-            }
+        if !(env_set("TRACING_FILTER") || env_set("RUST_LOG"))
+            && let Some(level) = cfg.level.as_ref()
+        {
+            rust_log = level.clone();
         }
-        if !env_set("TRACING_JSON") {
-            if let Some(v) = cfg.json { tracing_json = v; }
+        if !env_set("TRACING_JSON")
+            && let Some(v) = cfg.json
+        {
+            tracing_json = v;
         }
-        if !env_set("TRACING_COMPACT") {
-            if let Some(v) = cfg.compact { tracing_compact = v; }
+        if !env_set("TRACING_COMPACT")
+            && let Some(v) = cfg.compact
+        {
+            tracing_compact = v;
         }
-        if !env_set("TRACING_PRETTY") {
-            if let Some(v) = cfg.pretty { tracing_pretty = v; }
+        if !env_set("TRACING_PRETTY")
+            && let Some(v) = cfg.pretty
+        {
+            tracing_pretty = v;
         }
-        if !env_set("LOG_TO_FILE") {
-            if let Some(v) = cfg.to_file { log_to_file = v; }
+        if !env_set("LOG_TO_FILE")
+            && let Some(v) = cfg.to_file
+        {
+            log_to_file = v;
         }
-        if !env_set("LOG_DIR") {
-            if let Some(dir) = cfg.dir.as_ref() {
-                log_dir = Some(std::path::PathBuf::from(dir));
-            }
+        if !env_set("LOG_DIR")
+            && let Some(dir) = cfg.dir.as_ref()
+        {
+            log_dir = Some(std::path::PathBuf::from(dir));
         }
     }
 
@@ -128,7 +134,9 @@ fn init_tracing() {
             if let Err(e) = std::fs::create_dir_all(&dir) {
                 tracing::warn!("failed to create log dir {}: {}", dir.display(), e);
                 let subscriber = reg.with(stderr_layer);
-                if let Err(e) = subscriber.try_init() { tracing::debug!("tracing already set: {:?}", e); }
+                if let Err(e) = subscriber.try_init() {
+                    tracing::debug!("tracing already set: {:?}", e);
+                }
             } else {
                 let appender = tracing_appender::rolling::daily(dir, "switchboard-mcp.log");
                 let (nb, guard) = tracing_appender::non_blocking(appender);
@@ -141,11 +149,15 @@ fn init_tracing() {
                     .with_writer(nb)
                     .json();
                 let subscriber = reg.with(stderr_layer).with(file_layer);
-                if let Err(e) = subscriber.try_init() { tracing::debug!("tracing already set: {:?}", e); }
+                if let Err(e) = subscriber.try_init() {
+                    tracing::debug!("tracing already set: {:?}", e);
+                }
             }
         } else {
             let subscriber = reg.with(stderr_layer);
-            if let Err(e) = subscriber.try_init() { tracing::debug!("tracing already set: {:?}", e); }
+            if let Err(e) = subscriber.try_init() {
+                tracing::debug!("tracing already set: {:?}", e);
+            }
         }
     } else if tracing_compact {
         let stderr_layer = base.compact();
@@ -154,7 +166,9 @@ fn init_tracing() {
             if let Err(e) = std::fs::create_dir_all(&dir) {
                 tracing::warn!("failed to create log dir {}: {}", dir.display(), e);
                 let subscriber = reg.with(stderr_layer);
-                if let Err(e) = subscriber.try_init() { tracing::debug!("tracing already set: {:?}", e); }
+                if let Err(e) = subscriber.try_init() {
+                    tracing::debug!("tracing already set: {:?}", e);
+                }
             } else {
                 let appender = tracing_appender::rolling::daily(dir, "switchboard-mcp.log");
                 let (nb, guard) = tracing_appender::non_blocking(appender);
@@ -167,11 +181,15 @@ fn init_tracing() {
                     .with_writer(nb)
                     .compact();
                 let subscriber = reg.with(stderr_layer).with(file_layer);
-                if let Err(e) = subscriber.try_init() { tracing::debug!("tracing already set: {:?}", e); }
+                if let Err(e) = subscriber.try_init() {
+                    tracing::debug!("tracing already set: {:?}", e);
+                }
             }
         } else {
             let subscriber = reg.with(stderr_layer);
-            if let Err(e) = subscriber.try_init() { tracing::debug!("tracing already set: {:?}", e); }
+            if let Err(e) = subscriber.try_init() {
+                tracing::debug!("tracing already set: {:?}", e);
+            }
         }
     } else if tracing_pretty {
         let stderr_layer = base.pretty();
@@ -180,7 +198,9 @@ fn init_tracing() {
             if let Err(e) = std::fs::create_dir_all(&dir) {
                 tracing::warn!("failed to create log dir {}: {}", dir.display(), e);
                 let subscriber = reg.with(stderr_layer);
-                if let Err(e) = subscriber.try_init() { tracing::debug!("tracing already set: {:?}", e); }
+                if let Err(e) = subscriber.try_init() {
+                    tracing::debug!("tracing already set: {:?}", e);
+                }
             } else {
                 let appender = tracing_appender::rolling::daily(dir, "switchboard-mcp.log");
                 let (nb, guard) = tracing_appender::non_blocking(appender);
@@ -193,11 +213,15 @@ fn init_tracing() {
                     .with_writer(nb)
                     .pretty();
                 let subscriber = reg.with(stderr_layer).with(file_layer);
-                if let Err(e) = subscriber.try_init() { tracing::debug!("tracing already set: {:?}", e); }
+                if let Err(e) = subscriber.try_init() {
+                    tracing::debug!("tracing already set: {:?}", e);
+                }
             }
         } else {
             let subscriber = reg.with(stderr_layer);
-            if let Err(e) = subscriber.try_init() { tracing::debug!("tracing already set: {:?}", e); }
+            if let Err(e) = subscriber.try_init() {
+                tracing::debug!("tracing already set: {:?}", e);
+            }
         }
     } else {
         let stderr_layer = base;
@@ -206,7 +230,9 @@ fn init_tracing() {
             if let Err(e) = std::fs::create_dir_all(&dir) {
                 tracing::warn!("failed to create log dir {}: {}", dir.display(), e);
                 let subscriber = reg.with(stderr_layer);
-                if let Err(e) = subscriber.try_init() { tracing::debug!("tracing already set: {:?}", e); }
+                if let Err(e) = subscriber.try_init() {
+                    tracing::debug!("tracing already set: {:?}", e);
+                }
             } else {
                 let appender = tracing_appender::rolling::daily(dir, "switchboard-mcp.log");
                 let (nb, guard) = tracing_appender::non_blocking(appender);
@@ -218,11 +244,15 @@ fn init_tracing() {
                     .with_ansi(false)
                     .with_writer(nb);
                 let subscriber = reg.with(stderr_layer).with(file_layer);
-                if let Err(e) = subscriber.try_init() { tracing::debug!("tracing already set: {:?}", e); }
+                if let Err(e) = subscriber.try_init() {
+                    tracing::debug!("tracing already set: {:?}", e);
+                }
             }
         } else {
             let subscriber = reg.with(stderr_layer);
-            if let Err(e) = subscriber.try_init() { tracing::debug!("tracing already set: {:?}", e); }
+            if let Err(e) = subscriber.try_init() {
+                tracing::debug!("tracing already set: {:?}", e);
+            }
         }
     }
 }
@@ -306,15 +336,23 @@ async fn main() -> SdkResult<()> {
 
     // Determine Switchboard home (used for agents and logs)
     let sb_home = if let Ok(sb) = std::env::var("SWITCHBOARD_HOME") {
-        if !sb.is_empty() { std::path::PathBuf::from(sb) } else { std::path::PathBuf::new() }
-    } else { std::path::PathBuf::new() };
+        if !sb.is_empty() {
+            std::path::PathBuf::from(sb)
+        } else {
+            std::path::PathBuf::new()
+        }
+    } else {
+        std::path::PathBuf::new()
+    };
     let sb_home = if sb_home.as_os_str().is_empty() {
         if let Ok(home) = std::env::var("HOME") {
             std::path::PathBuf::from(home).join(".switchboard")
         } else {
             workspace_dir.join(".switchboard")
         }
-    } else { sb_home };
+    } else {
+        sb_home
+    };
     tracing::info!("switchboard_home={}", sb_home.display());
 
     // Resolve default directories
@@ -425,47 +463,44 @@ async fn main() -> SdkResult<()> {
 
     // Allow user config to add extra dirs (appended) when env isn’t explicitly set
     let mut codex_dirs = codex_dirs;
-    if !env_set("AGENTS_DIRS") {
-        if let Some(extra) = user_cfg
+    if !env_set("AGENTS_DIRS")
+        && let Some(extra) = user_cfg
             .as_ref()
             .and_then(|c| c.agents.as_ref())
             .and_then(|a| a.codex_dirs.as_ref())
-        {
-            for p in extra {
-                let pb = crate::config::expand_home(p);
-                if !codex_dirs.contains(&pb) {
-                    codex_dirs.push(pb);
-                }
+    {
+        for p in extra {
+            let pb = crate::config::expand_home(p);
+            if !codex_dirs.contains(&pb) {
+                codex_dirs.push(pb);
             }
         }
     }
     let mut anthropic_dirs = anthropic_dirs;
-    if !env_set("ANTHROPIC_AGENTS_DIRS") {
-        if let Some(extra) = user_cfg
+    if !env_set("ANTHROPIC_AGENTS_DIRS")
+        && let Some(extra) = user_cfg
             .as_ref()
             .and_then(|c| c.agents.as_ref())
             .and_then(|a| a.anthropic_dirs.as_ref())
-        {
-            for p in extra {
-                let pb = crate::config::expand_home(p);
-                if !anthropic_dirs.contains(&pb) {
-                    anthropic_dirs.push(pb);
-                }
+    {
+        for p in extra {
+            let pb = crate::config::expand_home(p);
+            if !anthropic_dirs.contains(&pb) {
+                anthropic_dirs.push(pb);
             }
         }
     }
     let mut vscode_dirs = vscode_dirs;
-    if !env_set("VSCODE_CHATMODES_DIRS") {
-        if let Some(extra) = user_cfg
+    if !env_set("VSCODE_CHATMODES_DIRS")
+        && let Some(extra) = user_cfg
             .as_ref()
             .and_then(|c| c.agents.as_ref())
             .and_then(|a| a.vscode_dirs.as_ref())
-        {
-            for p in extra {
-                let pb = crate::config::expand_home(p);
-                if !vscode_dirs.contains(&pb) {
-                    vscode_dirs.push(pb);
-                }
+    {
+        for p in extra {
+            let pb = crate::config::expand_home(p);
+            if !vscode_dirs.contains(&pb) {
+                vscode_dirs.push(pb);
             }
         }
     }
@@ -607,8 +642,11 @@ async fn main() -> SdkResult<()> {
             .and_then(|a| a.model_map_enable)
             .unwrap_or(*AGENTS_MODEL_MAP_ENABLE)
     };
-    let model_map_file = if env_set("AGENTS_MODEL_MAP_FILE") && !(*AGENTS_MODEL_MAP_FILE).is_empty() {
-        Some(std::path::PathBuf::from((*AGENTS_MODEL_MAP_FILE).to_string()))
+    let model_map_file = if env_set("AGENTS_MODEL_MAP_FILE") && !(*AGENTS_MODEL_MAP_FILE).is_empty()
+    {
+        Some(std::path::PathBuf::from(
+            (*AGENTS_MODEL_MAP_FILE).to_string(),
+        ))
     } else {
         user_cfg
             .as_ref()
@@ -695,8 +733,7 @@ async fn main() -> SdkResult<()> {
         },
         meta: None,
         instructions: Some(
-            "Call agent_* tools with { task, cwd } (cwd must be an absolute path)."
-                .to_string(),
+            "Call agent_* tools with { task, cwd } (cwd must be an absolute path).".to_string(),
         ),
         protocol_version: LATEST_PROTOCOL_VERSION.to_string(),
     };
